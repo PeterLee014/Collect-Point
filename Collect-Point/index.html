@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phone Number & Points Collection</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome for icons -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f5f5f5;
+    }
+
+    .container {
+      max-width: 400px;
+      margin: 50px auto;
+      background-color: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn {
+      margin-top: 15px;
+      width: 100%;
+    }
+
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-gap: 10px;
+    }
+
+    .keypad button {
+      padding: 20px;
+      font-size: 24px;
+      border-radius: 10px;
+    }
+
+    #collectBtn:disabled {
+      background-color: #ccc;
+      border-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    #statusMessage {
+      color: green;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container text-center">
+    <!-- Phone Number Input -->
+    <input type="tel" id="phoneNumber" class="form-control mb-4" placeholder="Enter Phone Number" readonly maxlength="10">
+
+    <!-- Keypad for Phone Number -->
+    <div class="keypad mb-4" id="phoneKeypad">
+      <button class="btn btn-primary" onclick="appendNumber('1')">1</button>
+      <button class="btn btn-primary" onclick="appendNumber('2')">2</button>
+      <button class="btn btn-primary" onclick="appendNumber('3')">3</button>
+      <button class="btn btn-primary" onclick="appendNumber('4')">4</button>
+      <button class="btn btn-primary" onclick="appendNumber('5')">5</button>
+      <button class="btn btn-primary" onclick="appendNumber('6')">6</button>
+      <button class="btn btn-primary" onclick="appendNumber('7')">7</button>
+      <button class="btn btn-primary" onclick="appendNumber('8')">8</button>
+      <button class="btn btn-primary" onclick="appendNumber('9')">9</button>
+      <button class="btn btn-primary" onclick="clearAll()"><i class="fas fa-trash"></i></button>
+      <button class="btn btn-primary" onclick="appendNumber('0')">0</button>
+      <button class="btn btn-primary" onclick="deleteLast()"><i class="fas fa-backspace"></i></button>
+    </div>
+
+    <!-- Collect Phone Number Button -->
+    <button id="collectBtn" class="btn btn-success p-3" onclick="collectPhoneNumber()" disabled>Collect Phone Number</button>
+
+    <!-- Status Message -->
+    <p id="statusMessage" class="mt-4"></p>
+
+    <!-- Points Collection Keypad (Initially Hidden) -->
+    <div id="pointsKeypad" class="keypad hidden">
+      <button class="btn btn-primary" onclick="appendPoints('1')">1</button>
+      <button class="btn btn-primary" onclick="appendPoints('2')">2</button>
+      <button class="btn btn-primary" onclick="appendPoints('3')">3</button>
+      <button class="btn btn-primary" onclick="appendPoints('4')">4</button>
+      <button class="btn btn-primary" onclick="appendPoints('5')">5</button>
+      <button class="btn btn-primary" onclick="appendPoints('6')">6</button>
+      <button class="btn btn-primary" onclick="appendPoints('7')">7</button>
+      <button class="btn btn-primary" onclick="appendPoints('8')">8</button>
+      <button class="btn btn-primary" onclick="appendPoints('9')">9</button>
+      <button class="btn btn-primary" onclick="clearPoints()">Clear Points</button>
+      <button class="btn btn-primary" onclick="appendPoints('0')">0</button>
+      <button class="btn btn-success" onclick="collectPoints()">Submit Points</button>
+    </div>
+
+    <!-- Points Summary (Initially Hidden) -->
+    <div id="pointsSummary" class="hidden">
+      <h4 id="totalPointsMessage"></h4>
+      <button class="btn btn-primary" onclick="backToPhoneInput()">Done</button>
+    </div>
+  </div>
+
+  <!-- Firebase JS SDK with ES Modules -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
+    import { getDatabase, ref, push, set, get, child } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBAJFCjM2JnAqcp6lPtN5gldnLGiSNVnnE",
+      authDomain: "collect-points-b4314.firebaseapp.com",
+      projectId: "collect-points-b4314",
+      storageBucket: "collect-points-b4314.appspot.com",
+      messagingSenderId: "52673710849",
+      appId: "1:52673710849:web:7eac107ff01d61d6d12900",
+      databaseURL: "https://console-playground-default-rtdb.asia-southeast1.firebasedatabase.app/"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+
+    let collectedPhone = '';
+    let totalPoints = 0;
+
+    // Append number to phone input
+    window.appendNumber = function(num) {
+      const phoneNumberInput = document.getElementById('phoneNumber');
+      const collectBtn = document.getElementById('collectBtn');
+      if (phoneNumberInput.value.length < 10) {
+        phoneNumberInput.value += num;
+      }
+      if (phoneNumberInput.value.length === 10) {
+        collectBtn.disabled = false;
+      } else {
+        collectBtn.disabled = true;
+      }
+    }
+
+    // Delete last digit of phone input
+    window.deleteLast = function() {
+      const phoneNumberInput = document.getElementById('phoneNumber');
+      const collectBtn = document.getElementById('collectBtn');
+      phoneNumberInput.value = phoneNumberInput.value.slice(0, -1);
+      collectBtn.disabled = phoneNumberInput.value.length !== 10;
+    }
+
+    // Clear phone input
+    window.clearAll = function() {
+      document.getElementById('phoneNumber').value = '';
+      document.getElementById('collectBtn').disabled = true;
+    }
+
+    // Collect phone number and show points keypad
+    window.collectPhoneNumber = function() {
+      const phoneNumber = document.getElementById('phoneNumber').value;
+
+      if (phoneNumber.length === 10) {
+        collectedPhone = phoneNumber;
+        document.getElementById('phoneNumber').value = '';
+        document.getElementById('phoneKeypad').classList.add('hidden');
+        document.getElementById('pointsKeypad').classList.remove('hidden');
+        
+        // Check total points in Firebase
+        const dbRef = ref(database);
+        get(child(dbRef, `phoneNumbers/${collectedPhone}`)).then((snapshot) => {
+          totalPoints = snapshot.exists() ? snapshot.val().points || 0 : 0;
+        });
+      }
+    }
+
+    // Points input handling
+    let collectedPoints = '';
+    window.appendPoints = function(num) {
+      const statusMessage = document.getElementById('statusMessage');
+      collectedPoints += num;
+      statusMessage.innerText = `Collected Points: ${collectedPoints}`;
+    }
+
+    // Clear points input
+    window.clearPoints = function() {
+      collectedPoints = '';
+      document.getElementById('statusMessage').innerText = "Points cleared. Enter points again.";
+    }
+
+    // Submit points and save to Firebase
+    window.collectPoints = function() {
+      if (collectedPoints) {
+        totalPoints += parseInt(collectedPoints);
+
+        const phoneRef = ref(database, `phoneNumbers/${collectedPhone}`);
+        set(phoneRef, { number: collectedPhone, points: totalPoints })
+          .then(() => {
+            document.getElementById('statusMessage').innerText = `Phone number and ${collectedPoints} points saved successfully!`;
+            document.getElementById('pointsKeypad').classList.add('hidden');
+            document.getElementById('totalPointsMessage').innerText = `You have ${totalPoints} points in total.`;
+            document.getElementById('pointsSummary').classList.remove('hidden');
+          });
+      }
+    }
+
+    // Back to phone number input
+    window.backToPhoneInput = function() {
+      collectedPhone = '';
+      collectedPoints = '';
+      document.getElementById('pointsSummary').classList.add('hidden');
+      document.getElementById('phoneKeypad').classList.remove('hidden');
+      document.getElementById('statusMessage').innerText = '';
+    }
+  </script>
+
+</body>
+
+</html>
